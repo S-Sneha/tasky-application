@@ -24,8 +24,7 @@ const htmlTaskContent = ({ id, title, description, type, url }) =>
         ${
           url
             ? `<img width='100%' height='150px' style="object-fit: cover; object-position: center"  src=${url} alt='card image' class='card-image-top md-3 rounded-lg' />`
-            : `<img width='100%' height='150px' style="object-fit: cover; object-position: center"  src="https://tse3.mm.bing.net/th?id=OIP.LZsJaVHEsECjt_hv1KrtbAHaHa&pid=Api&P=0" 
-               alt='card image' class='card-image-top md-3 rounded-lg' />`
+            : `<img width='100%' height='150px' style="object-fit: cover; object-position: center"  src="https://tse3.mm.bing.net/th?id=OIP.LZsJaVHEsECjt_hv1KrtbAHaHa&pid=Api&P=0" alt='card image' class='card-image-top md-3 rounded-lg' />`
         }
         <h4 class='task__card__title'>${title}</h4>
         <p class='description trim-3-lines text-muted' data-gram_editor='false'>
@@ -60,10 +59,11 @@ const htmlModalContent = ({ id, title, description, url }) => {
       ? `<img width='100%' src=${url} alt='card image here  class='img-fluid place__holder__image mb-3'/>`
       : `<img width='100%' height='150px' style="object-fit: cover; object-position: center"  src="https://tse3.mm.bing.net/th?id=OIP.LZsJaVHEsECjt_hv1KrtbAHaHa&pid=Api&P=0" alt='card image cap' class='card-image-top md-3 rounded-lg' />`
   }
-  <strong class="text-sm text-muted">Created on ${date.toDateString()}</strong>
+  <strong class='text-sm text-muted'> Created on ${date.toDateString()} </strong>
   <h2 class="my-3">${title}</h2>
   <p class='lead'>${description}</p>
   </div>`;
+
   };
 
   // Updating our local storage (the modals/cards which we see on our user-interface)
@@ -125,9 +125,120 @@ const openTask = (e) => {
 };
 
 //Delete operation : deleteTask()
+const deleteTask = (e) => {
+    if (!e) e = window.event;
+  
+    const targetID = e.target.getAttribute("name");
+    const type = e.target.tagName;
+    const removeTask = state.taskList.filter(({ id }) => id !== targetID);
 
+    // update taskList and localStorage
+    state.taskList = removeTask;
+    updateLocalStorage();
+
+    //Removing the particular child (card)
+    if (type === "BUTTON") {
+      return e.target.parentNode.parentNode.parentNode.parentNode.removeChild(
+        e.parentNode.parentNode.parentNode
+      );
+    }
+    return e.target.parentNode.parentNode.parentNode.parentNode.parentNode.removeChild(
+      e.target.parentNode.parentNode.parentNode.parentNode
+    );
+  };
+  
 
 //Edit operation : editTask()
+const editTask = (e) => {
+    if (!e) e = window.event;
+  
+    const targetID = e.target.id;
+    const type = e.target.tagName;
+  
+    let parentNode;
+    let taskTitle;
+    let taskDescription;
+    let taskType;
+    let submitButton;
+  
+    if (type === "BUTTON") {
+      parentNode = e.target.parentNode.parentNode;
+    } else {
+      parentNode = e.target.parentNode.parentNode.parentNode;
+    }
+  
+    taskTitle = parentNode.childNodes[3].childNodes[3];
+    taskDescription = parentNode.childNodes[3].childNodes[5];
+    taskType = parentNode.childNodes[3].childNodes[7].childNodes[1];
+    submitButton = parentNode.childNodes[5].childNodes[1];
+   
+    taskTitle.setAttribute("contenteditable", "true");
+    taskDescription.setAttribute("contenteditable", "true");
+    taskType.setAttribute("contenteditable", "true");
+  
+    submitButton.setAttribute("onclick", "saveEdit.apply(this, arguments)");
+    submitButton.removeAttribute("data-bs-toggle");
+    submitButton.removeAttribute("data-bs-target");
+    submitButton.innerHTML = "Save Changes";
+  };
+ 
+  //To save the edited data or modal : saveEdit()
+  const saveEdit = (e) => {
+    if (!e) e = window.event;
+  
+    const targetID = e.target.id;
+    const parentNode = e.target.parentNode.parentNode;
+  
+    const taskTitle = parentNode.childNodes[3].childNodes[3];
+    const taskDescription = parentNode.childNodes[3].childNodes[5];
+    const taskType = parentNode.childNodes[3].childNodes[7].childNodes[1];
+    const submitButton = parentNode.childNodes[5].childNodes[1];
+  
+    const updatedData = {
+      taskTitle: taskTitle.innerHTML,
+      taskDescription: taskDescription.innerHTML,
+      taskType: taskType.innerHTML,
+    };
+  
+    let stateCopy = state.taskList;
+    stateCopy = stateCopy.map((task) =>
+      task.id === targetID
+        ? {
+            id: task.id,
+            title: updatedData.taskTitle,
+            description: updatedData.taskDescription,
+            type: updatedData.taskType,
+            url: task.url,
+          }
+        : task
+    );
+  
+    state.taskList = stateCopy;
+    updateLocalStorage();
+  
+    taskTitle.setAttribute("contenteditable", "false");
+    taskDescription.setAttribute("contenteditable", "false");
+    taskType.setAttribute("contenteditable", "false");
+  
+    submitButton.setAttribute("onclick", "openTask.apply(this, arguments)");
+    submitButton.setAttribute("data-bs-toggle", "modal");
+    submitButton.setAttribute("data-bs-target", "#showTask");
+    submitButton.innerHTML = "Open Task";
+  };
 
-
-
+//To search a particular task : searchTask
+const searchTask = (e) => {
+    if (!e) e = window.event;
+  
+    while (taskContents.firstChild) {
+      taskContents.removeChild(taskContents.firstChild);
+    }
+  
+    const resultData = state.taskList.filter(({ title }) =>
+      title.toLowerCase().includes(e.target.value.toLowerCase())
+    );
+  
+    resultData.map((cardData) =>
+      taskContents.insertAdjacentHTML("beforeend", htmlTaskContent(cardData))
+    );
+  };
